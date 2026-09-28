@@ -32,6 +32,10 @@ SITE = "https://haoweidong555.github.io/qilv"
 SITE_NAME = "栖旅"
 TODAY = datetime.date.today().isoformat()
 
+# IndexNow 的钥匙：放在站点根目录下的一个 txt 文件里，用来证明「这个站是我的」。
+# 不是密码，公开无妨；改动它会导致旧文件失效，所以定了就别换。
+INDEXNOW_KEY = "9f4c1e7a2b8d4f6c0a3e5b7d9f1c2a4e"
+
 
 # ---------------------------------------------------------------- 读取城市数据
 
@@ -433,8 +437,12 @@ def main():
         f.write(sitemap(with_content))
     with open(os.path.join(out_root, "robots.txt"), "w", encoding="utf-8") as f:
         f.write(robots())
+    # IndexNow 的验证文件（必应等搜索引擎靠它确认提交者确实是站主）
+    with open(os.path.join(out_root, INDEXNOW_KEY + ".txt"), "w", encoding="utf-8") as f:
+        f.write(INDEXNOW_KEY + "\n")
 
-    print("已生成：%d 个城市页 + 城市总目录 + sitemap.xml + robots.txt" % len(with_content))
+    print("已生成：%d 个城市页 + 城市总目录 + sitemap.xml + robots.txt + IndexNow 验证文件"
+          % len(with_content))
     print("输出目录：%s" % out_root)
 
 
