@@ -132,7 +132,7 @@
 
     const [posts, replies, likes, saved, notes, prefs] = await Promise.all([
       rest('/posts_feed?select=*&order=created_at.desc&limit=200'),
-      rest('/replies?select=id,post,body,created_at,author,profiles(name,color,home)&order=created_at.asc&limit=500'),
+      rest('/replies?select=id,post,body,created_at,author,profiles(name,color,home,official)&order=created_at.asc&limit=500'),
       rest('/likes?select=post&user_id=eq.' + me),
       rest('/saved_cities?select=city'),
       rest('/notes?select=city,body'),

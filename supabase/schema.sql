@@ -11,8 +11,12 @@ create table if not exists public.profiles (
   name        text not null,
   color       text default '#c8452e',
   home        text,
+  -- 官方账号（编辑部）：内容以网站自己的名义发布，界面上会带「官方整理」标记
+  official    boolean not null default false,
   created_at  timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists official boolean not null default false;
 
 alter table public.profiles enable row level security;
 
@@ -153,15 +157,17 @@ create policy "prefs 本人" on public.prefs
 -- ============================================================
 -- 4. 游客能看的那一点点（注册才能看更多，这条在服务端执行）
 -- ============================================================
-create or replace function public.guest_posts(max_rows int default 3)
+-- 注意：改了返回列就不能用 create or replace，必须先 drop
+drop function if exists public.guest_posts(int);
+create function public.guest_posts(max_rows int default 3)
 returns table (
   id uuid, city text, topic text, body text, created_at timestamptz,
   author uuid, author_name text, author_color text, author_home text,
-  likes bigint
+  author_official boolean, likes bigint
 )
 language sql security definer set search_path = public as $$
   select p.id, p.city, p.topic, p.body, p.created_at,
-         p.author, pr.name, pr.color, pr.home,
+         p.author, pr.name, pr.color, pr.home, pr.official,
          (select count(*) from public.likes l where l.post = p.id)
   from public.posts p
   join public.profiles pr on pr.id = p.author
@@ -173,11 +179,13 @@ revoke all on function public.guest_posts(int) from public;
 grant execute on function public.guest_posts(int) to anon, authenticated;
 
 -- 登录用户读帖子时，顺便把作者信息和点赞数一起带出来（省一次请求）
+-- create or replace 只能往末尾加列，所以新列 author_official 放在最后
 create or replace view public.posts_feed as
   select p.id, p.city, p.topic, p.body, p.created_at,
          p.author, pr.name as author_name, pr.color as author_color, pr.home as author_home,
          (select count(*) from public.likes l where l.post = p.id) as likes,
-         (select count(*) from public.replies r where r.post = p.id) as replies
+         (select count(*) from public.replies r where r.post = p.id) as replies,
+         pr.official as author_official
   from public.posts p
   join public.profiles pr on pr.id = p.author;
 

@@ -6,6 +6,7 @@ assets/stock/pixabay-key.txt
 assets/stock/pexels-key.txt
 supabase/本地密钥.md
 supabase/*.local.md
+supabase/*.local.json
 
 # 大素材：不进版本库，靠备份包与 tools/ 里的脚本恢复
 # （视频由 tools/stock.py 重新下载/切片，分帧图随时能重新生成）

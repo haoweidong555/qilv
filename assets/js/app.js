@@ -395,7 +395,8 @@
         id: row.author,
         name: row.author_name || '旅人',
         color: row.author_color || '#666666',
-        home: row.author_home || ''
+        home: row.author_home || '',
+        official: !!row.author_official
       };
     });
     (payload.replies || []).forEach(function (r) {
@@ -405,7 +406,8 @@
         id: r.author,
         name: pr.name || '旅人',
         color: pr.color || '#666666',
-        home: pr.home || ''
+        home: pr.home || '',
+        official: !!pr.official
       };
     });
     store.remoteUsers = Object.assign({}, store.remoteUsers, users);
@@ -1565,7 +1567,7 @@
     opts = opts || {};
     const au = user(post.author);
     const el = document.createElement('article');
-    el.className = 'post';
+    el.className = 'post' + (au.official ? ' is-official' : '');
     const liked = store.likedPosts.indexOf(post.id) >= 0;
     const saved = store.savedPosts.indexOf(post.id) >= 0;
     const replies = repliesOf(post);
@@ -1576,7 +1578,8 @@
     head.appendChild(avatar(au));
     const who = document.createElement('div');
     who.className = 'post-who';
-    who.innerHTML = '<strong>' + esc(au.name) + '</strong>' +
+    who.innerHTML = '<span class="who-line"><strong>' + esc(au.name) + '</strong>' +
+      (au.official ? '<em class="badge-official" title="网站编辑部整理，非用户投稿">官方整理</em>' : '') + '</span>' +
       '<span>' + esc(au.home ? au.home + ' · ' : '') + fmtTime(post.ts) + '</span>';
     head.appendChild(who);
     const tags = document.createElement('div');
@@ -1612,7 +1615,9 @@
       rEl.className = 'reply';
       rEl.appendChild(avatar(ru, 'sm'));
       const rt = document.createElement('div');
-      rt.innerHTML = '<strong>' + esc(ru.name) + '</strong><span>' + fmtTime(r.ts) + '</span>';
+      rt.innerHTML = '<span class="who-line"><strong>' + esc(ru.name) + '</strong>' +
+        (ru.official ? '<em class="badge-official">官方整理</em>' : '') + '</span>' +
+        '<span>' + fmtTime(r.ts) + '</span>';
       const rp = document.createElement('p');
       rp.textContent = r.text;
       rt.appendChild(rp);
