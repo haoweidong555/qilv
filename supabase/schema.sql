@@ -166,12 +166,21 @@ returns table (
   author_official boolean, likes bigint
 )
 language sql security definer set search_path = public as $$
-  select p.id, p.city, p.topic, p.body, p.created_at,
-         p.author, pr.name, pr.color, pr.home, pr.official,
-         (select count(*) from public.likes l where l.post = p.id)
-  from public.posts p
-  join public.profiles pr on pr.id = p.author
-  order by p.created_at desc
+  -- 先按城市各取最新一条，再挑最新的 max_rows 条：
+  -- 这样只有 3 个名额的游客也能看到 3 座不同城市，而不是同一座城市连刷三条。
+  select t.id, t.city, t.topic, t.body, t.created_at,
+         t.author, t.author_name, t.author_color, t.author_home, t.author_official, t.likes
+  from (
+    select distinct on (coalesce(p.city, ''))
+           p.id, p.city, p.topic, p.body, p.created_at,
+           p.author, pr.name as author_name, pr.color as author_color, pr.home as author_home,
+           pr.official as author_official,
+           (select count(*) from public.likes l where l.post = p.id) as likes
+    from public.posts p
+    join public.profiles pr on pr.id = p.author
+    order by coalesce(p.city, ''), p.created_at desc
+  ) t
+  order by t.created_at desc
   limit greatest(1, least(max_rows, 3));
 $$;
 
