@@ -58,6 +58,14 @@ tools/video.swift       素材处理工具：分帧预览 + 剪出网页用短�
   右侧栏是话题计数和「本周被聊得最多的城市」。
 - **收藏**：收藏的城市并列比较，以及收藏的笔记。
 
+## 线上地址（2026-09-28 已上线）
+
+**https://haoweidong555.github.io/qilv/** —— 海外托管（GitHub Pages），免费子域名，无需备案。
+
+- 代码仓库：`https://github.com/haoweidong555/qilv`（`main` 放代码，`gh-pages` 放含视频的网站）
+- 改完网站想更新线上版本：`bash tools/deploy-pages.sh qilv`（一条命令，1–2 分钟后生效）
+- 细节与踩过的网络坑（`github.com:443` 不通、走 `ssh.github.com:443`）见 [docs/上线部署.md](docs/上线部署.md)
+
 ## 版本管理与备份（2026-09-28 建立）
 
 **代码用 git 管历史，素材用备份包保命**——仓库里不放那 93MB 视频。
