@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>栖旅 · 接口转发</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+         background: #14110e; color: #f0e9dd; font: 15px/1.7 -apple-system, "PingFang SC", sans-serif; }
+  .box { max-width: 520px; padding: 32px 28px; border: 1px solid #2c3038; border-radius: 16px; background: #1b1f26; }
+  h1 { font-size: 18px; margin: 0 0 10px; }
+  code { background: #0f1216; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+  p { color: #b6b2aa; margin: 8px 0; }
+  a { color: #e2705c; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>栖旅 · 接口转发服务</h1>
+  <p>这个站点只做一件事：把 <code>/rest/v1/*</code> 和 <code>/auth/v1/*</code>
+     的请求转发给后端的 Supabase（因为 <code>*.supabase.co</code> 在国内会被重置）。</p>
+  <p>它不存任何数据，也不含任何密钥。</p>
+  <p>网站本体在：<a href="https://haoweidong555.github.io/qilv/">haoweidong555.github.io/qilv</a></p>
+</div>
+</body>
+</html>

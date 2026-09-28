@@ -1,0 +1,8 @@
+# 栖旅 · 接口转发（Netlify 的 _redirects 规则）
+# 用法：把本文件夹拖到 app.netlify.com/drop，站点名改成 qilv-api
+# 作用：国内直连 *.supabase.co 会被重置，这里由 Netlify 在云端转发过去。
+# 规则里的 200 表示「改写/代理」，请求方法、请求体、响应都会原样透传。
+
+/rest/v1/*    https://jxumliwayvvrettmgaiy.supabase.co/rest/v1/:splat   200
+/auth/v1/*    https://jxumliwayvvrettmgaiy.supabase.co/auth/v1/:splat   200
+/            /index.html                                               200
