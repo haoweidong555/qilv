@@ -18,6 +18,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -60,12 +61,19 @@ def call(method, path, body=None, token=None, extra=None):
         req.add_header("Authorization", "Bearer " + token)
     for k, v in (extra or {}).items():
         req.add_header(k, v)
-    try:
-        with urllib.request.urlopen(req, timeout=40) as resp:
-            raw = resp.read().decode("utf-8")
-            return resp.status, (json.loads(raw) if raw else None)
-    except urllib.error.HTTPError as e:
-        raise SystemExit("请求失败 %s %s -> %s %s" % (method, path, e.code, e.read().decode("utf-8")[:300]))
+    last = None
+    # 网络偶尔会抽一下（SSL EOF / 超时），重试三次再放弃
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=40) as resp:
+                raw = resp.read().decode("utf-8")
+                return resp.status, (json.loads(raw) if raw else None)
+        except urllib.error.HTTPError as e:
+            raise SystemExit("请求失败 %s %s -> %s %s" % (method, path, e.code, e.read().decode("utf-8")[:300]))
+        except Exception as e:            # 网络类错误：歇一下重试
+            last = e
+            time.sleep(2 + attempt * 3)
+    raise SystemExit("网络不稳，重试三次仍失败：%s %s -> %r" % (method, path, last))
 
 
 def parse_content(path, name2id, id2name):

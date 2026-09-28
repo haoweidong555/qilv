@@ -2185,6 +2185,48 @@
       '</div>';
   }
 
+  /* ---------------- 城市页里的「官方手册」入口 ---------------- */
+
+  // 编辑部内容的展示顺序：手册 → 避坑 → 远程办公
+  const HANDBOOK_ORDER = ['guide', 'pit', 'work'];
+
+  function officialPostsOf(cityId) {
+    return allPosts().filter(function (p) {
+      return p.city === cityId && user(p.author).official;
+    });
+  }
+
+  function handbookCard(city, posts) {
+    if (!posts.length) return '';
+    const rows = HANDBOOK_ORDER.map(function (t) {
+      return posts.filter(function (p) { return p.topic === t; })[0] || null;
+    }).filter(Boolean);
+    if (!rows.length) return '';
+
+    return '<div class="handbook-card">' +
+      '<div class="handbook-head">' +
+        '<em class="badge-official">官方整理</em>' +
+        '<h4>' + esc(city.name) + '旅居手册</h4>' +
+        '<span class="handbook-by">栖旅编辑部</span>' +
+      '</div>' +
+      '<div class="handbook-list">' +
+        rows.map(function (p) {
+          const title = String(p.text || '').split('\n')[0];
+          return '<button type="button" class="handbook-row" data-handbook="' + city.id +
+              '" data-topic="' + esc(p.topic) + '">' +
+            '<span class="handbook-topic">#' + esc(D.topicName(p.topic)) + '</span>' +
+            '<span class="handbook-title">' + esc(title) + '</span>' +
+            '<span class="handbook-go">看全文 →</span>' +
+          '</button>';
+        }).join('') +
+      '</div>' +
+      '<div class="handbook-foot">' +
+        '<span class="handbook-cnt">这座城市共有 ' + posts.length + ' 条官方笔记</span>' +
+        '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function openDetail(cityId) {
     const city = D.cityById(cityId);
     if (!city) return;
@@ -2263,6 +2305,7 @@
           '<section class="detail-sec" id="detail-overview">' +
             '<h3><span class="sec-num">01</span>为什么值得住一段时间</h3>' +
             '<p class="detail-intro">' + esc(city.intro) + '</p>' +
+            handbookCard(city, officialPostsOf(city.id)) +
             '<div class="fit-row">' + fitChips(city) + '</div>' +
             transitChips(city) +
           '</section>' +
@@ -2869,6 +2912,18 @@
 
       const goto = t.closest('[data-goto]');
       if (goto) { openDetail(goto.getAttribute('data-goto')); return; }
+
+      // 城市页 → 编辑部手册：跳到交流区，并按这座城市（可带话题）筛选
+      const hbBtn = t.closest('[data-handbook]');
+      if (hbBtn) {
+        state.feedCity = hbBtn.getAttribute('data-handbook');
+        state.topic = hbBtn.getAttribute('data-topic') || 'all';
+        closeDetail();
+        setView('feed');
+        const citySel = $('[data-feed-city]');
+        if (citySel) citySel.value = state.feedCity;
+        return;
+      }
 
       const scrollBtn = t.closest('[data-scroll-gallery]');
       if (scrollBtn) {
