@@ -2189,6 +2189,11 @@
 
   // 编辑部内容的展示顺序：手册 → 避坑 → 远程办公
   const HANDBOOK_ORDER = ['guide', 'pit', 'work'];
+  const HANDBOOK_LABEL = {
+    guide: ['城市手册', '住哪个片区、房租、网速、几月最舒服'],
+    pit: ['避坑', '交定金之前先看的几条'],
+    work: ['远程办公实测', '网速区间，和在哪儿办公最顺']
+  };
 
   function officialPostsOf(cityId) {
     return allPosts().filter(function (p) {
@@ -2197,10 +2202,17 @@
   }
 
   function handbookCard(city, posts) {
-    if (!posts.length) return '';
+    const member = isMember();
+    // 登录后：列出这座城市真实存在的三篇；
+    // 游客：只露标题，点一下就是注册入口——用户笔记本来就是注册才能看的。
     const rows = HANDBOOK_ORDER.map(function (t) {
-      return posts.filter(function (p) { return p.topic === t; })[0] || null;
-    }).filter(Boolean);
+      return {
+        topic: t,
+        label: HANDBOOK_LABEL[t][0],
+        desc: HANDBOOK_LABEL[t][1],
+        post: posts.filter(function (p) { return p.topic === t; })[0] || null
+      };
+    }).filter(function (r) { return member ? !!r.post : true; });
     if (!rows.length) return '';
 
     return '<div class="handbook-card">' +
@@ -2210,19 +2222,26 @@
         '<span class="handbook-by">栖旅编辑部</span>' +
       '</div>' +
       '<div class="handbook-list">' +
-        rows.map(function (p) {
-          const title = String(p.text || '').split('\n')[0];
-          return '<button type="button" class="handbook-row" data-handbook="' + city.id +
-              '" data-topic="' + esc(p.topic) + '">' +
-            '<span class="handbook-topic">#' + esc(D.topicName(p.topic)) + '</span>' +
-            '<span class="handbook-title">' + esc(title) + '</span>' +
-            '<span class="handbook-go">看全文 →</span>' +
+        rows.map(function (r) {
+          const title = r.post ? String(r.post.text || '').split('\n')[0] : r.label;
+          const attr = r.post
+            ? ' data-handbook="' + city.id + '" data-topic="' + esc(r.topic) + '"'
+            : ' data-open-auth="1"';
+          return '<button type="button" class="handbook-row"' + attr + '>' +
+            '<span class="handbook-topic">#' + esc(D.topicName(r.topic)) + '</span>' +
+            '<span class="handbook-title">' + esc(title) +
+              (r.post ? '' : '<i class="handbook-desc">' + esc(r.desc) + '</i>') + '</span>' +
+            '<span class="handbook-go">' + (r.post ? '看全文 →' : '注册后看 →') + '</span>' +
           '</button>';
         }).join('') +
       '</div>' +
       '<div class="handbook-foot">' +
-        '<span class="handbook-cnt">这座城市共有 ' + posts.length + ' 条官方笔记</span>' +
-        '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>' +
+        '<span class="handbook-cnt">' + (member
+          ? '这座城市共有 ' + posts.length + ' 条官方笔记'
+          : '编辑部为这座城市整理了 ' + rows.length + ' 篇，注册后可看全文') + '</span>' +
+        (member
+          ? '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>'
+          : '') +
       '</div>' +
     '</div>';
   }
