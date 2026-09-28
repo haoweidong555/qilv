@@ -1,0 +1,18 @@
+# macOS
+.DS_Store
+
+# 密钥：绝对不要进版本库
+assets/stock/pixabay-key.txt
+assets/stock/pexels-key.txt
+
+# 大素材：不进版本库，靠备份包与 tools/ 里的脚本恢复
+# （视频由 tools/stock.py 重新下载/切片，分帧图随时能重新生成）
+assets/video/*.mp4
+assets/stock/sheets/
+大理/
+视频免版权素材/
+
+# 过程产物
+preview/
+.backups/
+*.log

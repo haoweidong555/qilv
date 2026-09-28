@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>素材复核</title>
+<style>
+  body { margin: 0; background: #14110e; color: #eee; font: 13px/1.5 -apple-system, "PingFang SC", sans-serif; }
+  h1 { font-size: 16px; padding: 10px 14px; margin: 0; background: #221d18; position: sticky; top: 0; z-index: 2; }
+  p.note { margin: 0; padding: 6px 14px 10px; background: #221d18; color: #b9b2a8; font-size: 12px; }
+  #grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px; }
+  figure { margin: 0; }
+  #grid.hero { grid-template-columns: repeat(2, 1fr); }
+  img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; border-radius: 6px; background: #000; }
+  #grid.hero img { aspect-ratio: 5 / 4; }
+  figcaption { font-size: 11px; color: #b9b2a8; padding: 3px 2px 0; }
+  #grid.hero figcaption { font-size: 15px; color: #f0e9dd; padding-top: 6px; }
+  #grid.hero figcaption em { font-style: normal; color: #8d8478; font-size: 12px; }
+  .bad { outline: 2px solid #c8452e; outline-offset: -2px; }
+</style>
+</head>
+<body>
+<h1 id="title">加载中…</h1>
+<p class="note">红框＝当前被 CITY_VIDEOS_HOLD 撤下实拍、改用绘制画面的城市（截图里看不出红框是正常的，图是同一批）。</p>
+<p class="note">分片看：<code>review.html?from=1&amp;to=12&amp;cols=2&amp;hero=1</code>；每片最多 12 张，图会放大。</p>
+<div id="grid"></div>
+<script>
+  var q = new URLSearchParams(location.search);
+  var from = Math.max(1, parseInt(q.get('from') || '1', 10));
+  var cols = parseInt(q.get('cols') || '4', 10);
+  var hero = q.get('hero') === '1';
+  var grid = document.getElementById('grid');
+  if (hero) grid.className = 'hero';
+  grid.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+
+  fetch('../assets/stock/credits.json').then(function (r) { return r.json(); }).then(function (c) {
+    var keys = Object.keys(c).sort();
+    var hold = ['chengde', 'datong', 'jinan', 'kashgar', 'lanzhou', 'leshan',
+      'lijiang', 'nanning', 'taiyuan', 'xian', 'xining', 'yanan'];
+    var to = Math.min(keys.length, parseInt(q.get('to') || String(keys.length), 10));
+    var slice = keys.slice(from - 1, to);
+    slice.forEach(function (k) {
+      var fig = document.createElement('figure');
+      var isHold = hold.indexOf(k) >= 0;
+      fig.innerHTML = '<img class="' + (isHold ? 'bad' : '') + '" src="../assets/video/' + k +
+        '-poster.jpg" alt="">' +
+        '<figcaption>#' + (from + slice.indexOf(k)) + '　' +
+        (c[k].city_name || k) + (isHold ? '（已撤下）' : '') +
+        '　<em>' + k + ' · ' + (c[k].keyword || '') + '</em></figcaption>';
+      grid.appendChild(fig);
+    });
+    document.getElementById('title').textContent =
+      '素材复核 · 第 ' + from + '–' + to + ' 张 / 共 ' + keys.length + ' 张（封面帧）';
+    document.title = '复核就绪';
+  });
+</script>
+</body>
+</html>

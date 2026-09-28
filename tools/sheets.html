@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>分帧复核</title>
+<style>
+  body { margin: 0; background: #14110e; color: #eee; font: 13px/1.5 -apple-system, "PingFang SC", sans-serif; }
+  h1 { font-size: 15px; padding: 8px 12px; margin: 0; background: #221d18; }
+  figure { margin: 0 0 10px; }
+  img { width: 100%; display: block; background: #000; }
+  figcaption { font-size: 14px; color: #f0e9dd; padding: 4px 12px; background: #221d18; }
+</style>
+</head>
+<body>
+<h1 id="title">分帧复核</h1>
+<div id="wrap"></div>
+<script>
+  var q = new URLSearchParams(location.search);
+  var cities = (q.get('cities') || '').split(',').filter(Boolean);
+  var wrap = document.getElementById('wrap');
+  cities.forEach(function (c) {
+    var fig = document.createElement('figure');
+    fig.innerHTML = '<figcaption>' + c + '</figcaption>' +
+      '<img src="../assets/stock/sheets/' + c + '.png" alt="">';
+    wrap.appendChild(fig);
+  });
+  document.getElementById('title').textContent = '分帧复核 · ' + cities.length + ' 座';
+  document.title = '分帧就绪';
+</script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>栖旅 · 中国旅居社区</title>
+<meta name="description" content="用一幅会动的画，认识一座适合长住的中国城市。画廊式浏览，实拍与实时绘制的城市画面，和一个真正有人在说话的旅居社区。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23c8452e'/%3E%3Cpath d='M16 7l2.6 6.4L25 16l-6.4 2.6L16 25l-2.6-6.4L7 16l6.4-2.6z' fill='%23fdf8f1'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- 整页的大背景：随时辰换的一幅手绘画（assets/js/daycycle.js） -->
+<div class="page-sky" data-day-canvas aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="#" data-view="gallery">
+      <span class="brand-mark">栖</span>
+      <span class="brand-text">
+        <strong>栖旅</strong>
+        <em>中国旅居社区</em>
+      </span>
+    </a>
+
+    <nav class="mainnav" aria-label="主导航">
+      <button type="button" class="navbtn is-active" data-view="gallery" aria-current="page">画廊</button>
+      <button type="button" class="navbtn" data-view="feed">交流<span class="navdot" data-live-post-count></span></button>
+      <button type="button" class="navbtn" data-view="saved">收藏<span class="navcount" data-saved-count>0</span></button>
+    </nav>
+
+    <div class="topbar-actions">
+      <div class="account-slot" data-account-slot></div>
+      <button type="button" class="ghost-btn" data-toggle-motion aria-pressed="true" title="开关画面动效">
+        <span class="motion-dot"></span>
+        <span data-motion-label>画面动效 ON</span>
+        <span data-motion-label-short>动效 ON</span>
+      </button>
+      <button type="button" class="primary-btn" data-open-composer>+ 发布旅居笔记</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ============ 画廊 ============ -->
+  <section id="view-gallery" class="view">
+
+    <!-- 影院区：深色底，负责视觉冲击；下面是纸面区，负责阅读 -->
+    <div class="cinema">
+    <div class="hero">
+      <!-- 首屏的城市背景：一天两座城市，素材来自下面的画廊短片（见 app.js 的 heroToday） -->
+      <img class="bg-img" data-hero-poster src="assets/video/dali-poster.jpg" alt="" fetchpriority="high" decoding="async">
+      <video class="hero-video" data-hero-video muted loop playsinline preload="auto" aria-hidden="true"></video>
+      <div class="hero-scrim"></div>
+
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <p class="eyebrow">Gallery of China · 会动的旅居画册</p>
+          <h1>用一幅会动的画，<br>认识一座适合久住的城市。</h1>
+          <p class="hero-sub">苍山的风、洱海的波光、草原的云、老城的灯火。
+            点开每一座城市，看数据，也看真正在那里生活的人怎么说。</p>
+
+          <p class="day-now">
+            <span class="day-dot" aria-hidden="true"></span>
+            <span><b data-day-label>傍晚</b></span>
+            <em data-day-clock>18:00</em>
+            <span class="day-now-sep" aria-hidden="true">·</span>
+            <span>今天第 <b data-hero-slot>1</b> 幅是 <b data-hero-city>大理</b></span>
+            <span class="day-now-sep" aria-hidden="true">·</span>
+            <span data-hero-next>12:00 换成下一座城市</span>
+            <span class="day-preview-flag" data-previewing hidden>预览中</span>
+            <button type="button" class="day-reset" data-day-reset hidden>回到此刻</button>
+          </p>
+
+          <div class="hero-actions">
+            <button type="button" class="primary-btn hero-btn" data-scroll-gallery>浏览 <span data-city-count>16</span> 座城市</button>
+            <button type="button" class="glass-btn" data-hero-open data-goto="dali">
+              <span class="play-dot" aria-hidden="true">▶</span><span data-hero-open-label>看大理的实拍短片</span>
+            </button>
+          </div>
+
+          <div class="hero-proof">
+            <span class="avatar-stack" data-hero-avatars aria-hidden="true"></span>
+            <span>来自 <span data-city-count>16</span> 座城市的旅人，正在这里交流</span>
+          </div>
+        </div>
+
+        <aside class="hero-card">
+          <img data-next-poster src="assets/video/hangzhou-poster.jpg" alt="" loading="lazy" decoding="async">
+          <div class="hero-card-body">
+            <strong data-next-title>下一幅 · 大理</strong>
+            <span data-next-note>下一座城市</span>
+          </div>
+          <span class="hero-card-play" aria-hidden="true">▶</span>
+          <button type="button" class="hero-card-link" data-next-open data-goto="dali" aria-label="打开下一幅城市的实拍短片"></button>
+        </aside>
+      </div>
+
+      <svg class="curve curve-bottom" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,10 C300,74 1140,74 1440,10 L1440,110 L0,110 Z"></path>
+      </svg>
+    </div>
+
+    <!-- 照片与画廊之间的滚动卡片带：内容很杂，什么都有 -->
+    <div class="marquee" aria-label="正在发生">
+      <div class="marquee-track" data-marquee-track></div>
+    </div>
+
+    <div class="wrap" data-gallery-anchor>
+      <div class="quick-filters" data-quick-filters role="group" aria-label="快速筛选"></div>
+      <div class="toolbar">
+        <div class="chips" role="tablist" aria-label="按类型筛选" data-cat-chips></div>
+        <div class="toolbar-right">
+          <label class="search">
+            <span aria-hidden="true">⌕</span>
+            <input type="search" placeholder="搜城市、省份、关键词…" data-search aria-label="搜索城市">
+          </label>
+          <label class="select">
+            <span>排序</span>
+            <select data-sort aria-label="排序方式">
+              <option value="index">旅居指数</option>
+              <option value="cost">月成本从低到高</option>
+              <option value="net">网速从快到慢</option>
+              <option value="hot">社区最热</option>
+              <option value="mine">按我的偏好</option>
+            </select>
+          </label>
+          <label class="select">
+            <span>省份</span>
+            <select data-province aria-label="按省份筛选"></select>
+          </label>
+        </div>
+      </div>
+
+      <div class="gallery-meta">
+        <p class="stat-line">
+          <span><b data-stat-cities>—</b>城市</span>
+          <em>·</em>
+          <span><b data-stat-posts>—</b>旅居笔记</span>
+          <em>·</em>
+          <span><b data-stat-topics>—</b>话题</span>
+          <em>·</em>
+          <span><b data-stat-live>—</b>动态画面</span>
+        </p>
+        <p class="result-line" data-result-line aria-live="polite"></p>
+      </div>
+      <div class="gallery" data-gallery></div>
+      <p class="empty" data-gallery-empty hidden>没有匹配的城市，换个关键词试试。</p>
+    </div>
+    <svg class="curve cinema-exit" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,10 C300,74 1140,74 1440,10 L1440,110 L0,110 Z"></path>
+    </svg>
+    </div>
+
+    <section class="band">
+      <img class="bg-img" src="assets/img/band-three-pagodas.jpg" alt="大理崇圣寺三塔的清晨" loading="lazy" decoding="async">
+      <div class="day-bg" data-day-canvas aria-hidden="true"></div>
+      <div class="band-scrim"></div>
+      <div class="band-copy">
+        <p class="eyebrow">Daylight · 一天十二幅</p>
+        <h2>这个网站的天，<br>和你那边的时间一起走。</h2>
+        <p class="band-sub">每两小时换一幅画：拂晓的青、正午的蓝、傍晚的金、深夜的星。
+          你什么时候打开，就看到什么时候的光——十二幅，全是画出来的，一直在动。</p>
+
+        <div class="day-rail-wrap">
+          <div class="day-rail" data-day-rail role="group" aria-label="一天十二幅画"></div>
+          <p class="day-rail-foot">
+            现在 <b data-day-label>傍晚</b>
+            <span data-day-range>16:00–18:00</span>
+            <span class="day-rail-sep" aria-hidden="true">·</span>
+            <span data-day-note>金色的一小时</span>
+            <span class="day-preview-flag" data-previewing hidden>预览中</span>
+            <button type="button" class="day-reset" data-day-reset hidden>回到此刻</button>
+          </p>
+        </div>
+
+        <button type="button" class="glass-btn" data-goto="dali">看看大理的一天 →</button>
+      </div>
+      <svg class="curve curve-top" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,0 L1440,0 L1440,10 C1140,74 300,74 0,10 Z"></path>
+      </svg>
+      <svg class="curve curve-bottom" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,10 C300,74 1140,74 1440,10 L1440,110 L0,110 Z"></path>
+      </svg>
+    </section>
+  </section>
+
+  <!-- ============ 交流 ============ -->
+  <section id="view-feed" class="view" hidden>
+    <header class="page-head">
+      <img class="bg-img" src="assets/img/band-ancient-road.jpg" alt="大理永平，博南古道上的马帮" loading="lazy" decoding="async">
+      <div class="day-bg" data-day-canvas aria-hidden="true"></div>
+      <div class="page-head-scrim"></div>
+      <div class="page-head-inner">
+        <div>
+          <p class="eyebrow">Community · 旅居交流</p>
+          <h1>谁在这里，正在过什么样的日子。</h1>
+          <p class="hero-sub">这里不是评分网站，是有人在说话的地方。找搭子、问租房、报路况、避坑、约饭。</p>
+          <p class="day-now day-now-slim">
+            <span class="day-dot" aria-hidden="true"></span>
+            <span>现在这幅是 <b data-day-label>傍晚</b></span>
+            <em data-day-clock>18:00</em>
+          </p>
+        </div>
+        <button type="button" class="primary-btn" data-open-composer>+ 发布旅居笔记</button>
+      </div>
+      <svg class="curve curve-bottom" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,10 C300,74 1140,74 1440,10 L1440,110 L0,110 Z"></path>
+      </svg>
+    </header>
+
+    <div class="wrap">
+      <div class="feed-layout">
+        <aside class="feed-side">
+          <div class="side-block">
+            <h3>话题</h3>
+            <div class="topic-list" data-topic-list></div>
+          </div>
+          <div class="side-block">
+            <h3>本周被聊得最多的城市</h3>
+            <div class="hot-list" data-hot-cities></div>
+          </div>
+        </aside>
+
+        <div class="feed-main">
+          <div class="composer-inline">
+            <div class="avatar" data-me-avatar>旅</div>
+            <div class="composer-inline-body">
+              <textarea rows="2" placeholder="说说你现在的城市，或者你打算去哪…" data-quick-input></textarea>
+              <div class="composer-inline-foot">
+                <label class="select select-slim">
+                  <span>城市</span>
+                  <select data-feed-city aria-label="选择城市"></select>
+                </label>
+                <label class="select select-slim">
+                  <span>排序</span>
+                  <select data-feed-sort aria-label="排序方式">
+                    <option value="new">最新</option>
+                    <option value="hot">最热</option>
+                  </select>
+                </label>
+                <span class="hint">⌘/Ctrl + Enter 发布</span>
+                <button type="button" class="primary-btn" data-quick-post>发布</button>
+              </div>
+            </div>
+          </div>
+          <div class="post-list" data-post-list></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 收藏 ============ -->
+  <section id="view-saved" class="view" hidden>
+    <header class="page-head page-head-short">
+      <img class="bg-img" src="assets/img/band-cangshan.jpg" alt="苍山清碧溪" loading="lazy" decoding="async">
+      <div class="day-bg" data-day-canvas aria-hidden="true"></div>
+      <div class="page-head-scrim"></div>
+      <div class="page-head-inner">
+        <div>
+          <p class="eyebrow">Saved · 我的旅居清单</p>
+          <h1>你正在考虑的落脚点。</h1>
+          <p class="hero-sub">收藏的城市会出现在这里，方便你并排比较。</p>
+          <p class="day-now day-now-slim">
+            <span class="day-dot" aria-hidden="true"></span>
+            <span>现在这幅是 <b data-day-label>傍晚</b></span>
+            <em data-day-clock>18:00</em>
+          </p>
+        </div>
+      </div>
+      <svg class="curve curve-bottom" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,10 C300,74 1140,74 1440,10 L1440,110 L0,110 Z"></path>
+      </svg>
+    </header>
+
+    <div class="wrap">
+      <div class="saved-grid" data-saved-cities></div>
+      <p class="empty" data-saved-empty hidden>还没有收藏的城市。回到画廊，点卡片右上角的星标。</p>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <p class="foot-line">栖旅 · 一个中国旅居社区的原型。注册免费，发帖免费。</p>
+    <p>城市画面为免版权实拍短片，找不到对应素材的 12 座城市由浏览器实时绘制；“旅居指数”等数值为示例口径，正式上线前需逐城校准并标注来源。</p>
+  </div>
+</footer>
+
+<!-- ============ 城市详情 ============ -->
+<div id="detail" class="overlay" hidden>
+  <div class="overlay-backdrop" data-close-detail></div>
+  <div class="detail-panel" role="dialog" aria-modal="true" aria-label="城市详情" tabindex="-1" data-detail-panel></div>
+</div>
+
+<!-- ============ 注册 / 登录 ============ -->
+<div id="auth" class="overlay" hidden>
+  <div class="overlay-backdrop" data-close-auth></div>
+  <form class="modal modal-auth" role="dialog" aria-modal="true" aria-label="注册或登录" data-auth-form>
+    <h2 data-auth-title>注册 / 登录</h2>
+    <p class="modal-sub" data-auth-reason>注册免费，发帖也免费。注册后可以看完整的旅居数据和全部社区笔记。</p>
+    <label class="field">
+      <span>手机号</span>
+      <input type="tel" inputmode="numeric" autocomplete="tel" maxlength="11"
+             placeholder="11 位手机号" data-auth-phone>
+    </label>
+    <label class="field">
+      <span>验证码</span>
+      <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
+             placeholder="6 位数字（原型阶段随便填）" data-auth-code>
+    </label>
+    <label class="field">
+      <span>昵称</span>
+      <input type="text" maxlength="12" placeholder="别人怎么称呼你" data-auth-name>
+    </label>
+    <p class="auth-note">原型阶段不会真的发短信，验证码填 6 位数字就能进；账号目前只存在这台设备上。</p>
+    <div class="modal-foot">
+      <button type="button" class="ghost-btn" data-close-auth>取消</button>
+      <button type="submit" class="primary-btn">注册并进入</button>
+    </div>
+  </form>
+</div>
+
+<!-- ============ 发布 ============ -->
+<div id="composer" class="overlay" hidden>
+  <div class="overlay-backdrop" data-close-composer></div>
+  <form class="modal" role="dialog" aria-modal="true" aria-label="发布旅居笔记" data-composer-form>
+    <h2>发布旅居笔记</h2>
+    <p class="modal-sub">真实的一手经验比任何榜单都有用。</p>
+    <div class="field-row">
+      <label class="field">
+        <span>城市</span>
+        <select data-composer-city></select>
+      </label>
+      <label class="field">
+        <span>话题</span>
+        <select data-composer-topic></select>
+      </label>
+    </div>
+    <label class="field">
+      <span>内容</span>
+      <textarea rows="5" required placeholder="例如：11 月想在大理住两个月，求搭子一起骑车看日落。" data-composer-text></textarea>
+    </label>
+    <div class="modal-foot">
+      <button type="button" class="ghost-btn" data-close-composer>取消</button>
+      <button type="submit" class="primary-btn">发布</button>
+    </div>
+  </form>
+</div>
+
+<div class="toast" role="status" aria-live="polite" data-toast hidden></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/scenes.js"></script>
+<script src="assets/js/daycycle.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
