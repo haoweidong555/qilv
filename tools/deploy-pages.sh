@@ -14,9 +14,14 @@ set -euo pipefail
 REPO="${1:-qilv}"
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
 
+# 本机连不上 github.com:443，只能用 SSH 的 443 端口端口复用地址
+SSH_CMD="ssh -o StrictHostKeyChecking=accept-new"
+
 gh auth status >/dev/null 2>&1 || { echo "还没登录 GitHub，先跑：gh auth login"; exit 1; }
 OWNER="$(gh api user -q .login)"
 echo "发布到：$OWNER/$REPO"
+
+SSH_URL="ssh://git@ssh.github.com:443/$OWNER/$REPO.git"
 
 cd "$SRC"
 
@@ -24,9 +29,9 @@ cd "$SRC"
 if ! git remote get-url origin >/dev/null 2>&1; then
   gh repo create "$OWNER/$REPO" --public \
     --description "栖旅 · 一个中国旅居社区（画廊式城市浏览 + 城市页 + 社区）" >/dev/null
-  git remote add origin "https://github.com/$OWNER/$REPO.git"
+  git remote add origin "$SSH_URL"
 fi
-git push -u origin "$(git branch --show-current)"
+git -c core.sshCommand="$SSH_CMD" push -u origin "$(git branch --show-current)"
 
 # 2) 组装网站（含 69 座城市的实拍短片）并推到 gh-pages
 WORK="$(mktemp -d)"
@@ -45,8 +50,8 @@ cp -R "$SITE/." .
 git add -A
 git -c user.name="$OWNER" -c user.email="$OWNER@users.noreply.github.com" \
     commit -q -m "部署：$(date '+%Y-%m-%d %H:%M')"
-git remote add origin "https://github.com/$OWNER/$REPO.git"
-git push -f origin gh-pages
+git remote add origin "$SSH_URL"
+git -c core.sshCommand="$SSH_CMD" push -f origin gh-pages
 
 # 3) 打开 Pages
 gh api "repos/$OWNER/$REPO/pages" -X POST \
