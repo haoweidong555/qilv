@@ -20,6 +20,8 @@
     compare: [],
     notes: {},
     prefs: null,      // 我的偏好权重（拖动详情页滑杆后才有）
+    remoteUsers: {},  // 云端用户档案（id → {name,color,home}）
+    remotePosts: [],  // 云端帖子（接了后端才有）
     motion: true,
     me: { name: '我', color: '#1f1c18' },
     account: null,
@@ -36,6 +38,8 @@
         if (Array.isArray(o.compare)) store.compare = o.compare.slice(0, 3);
         if (o.notes && typeof o.notes === 'object') store.notes = o.notes;
         if (o.prefs && typeof o.prefs === 'object') store.prefs = o.prefs;
+        if (o.remoteUsers && typeof o.remoteUsers === 'object') store.remoteUsers = o.remoteUsers;
+        if (Array.isArray(o.remotePosts)) store.remotePosts = o.remotePosts;
         if (typeof o.motion === 'boolean') store.motion = o.motion;
         if (o.me && o.me.name) store.me = o.me;
         if (o.account && o.account.phone) {
@@ -55,6 +59,8 @@
           compare: store.compare,
           notes: store.notes,
           prefs: store.prefs,
+          remoteUsers: store.remoteUsers,
+          remotePosts: store.remotePosts,
           motion: store.motion,
           me: store.me,
           account: store.account
@@ -179,6 +185,7 @@
 
   function user(id) {
     if (id === 'me') return { id: 'me', name: store.me.name, color: store.me.color, home: '正在旅居' };
+    if (store.remoteUsers && store.remoteUsers[id]) return store.remoteUsers[id];
     return D.USERS[id] || { id: id, name: '旅人', color: '#666666', home: '' };
   }
 
@@ -225,9 +232,64 @@
     if (!box) return;
     $('[data-auth-reason]').textContent = reason ||
       '注册免费，发帖也免费。注册后可以看完整的旅居数据和全部社区笔记。';
+    applyAuthMode();
     box.hidden = false;
     document.body.classList.add('no-scroll');
     setTimeout(function () { const f = $('[data-auth-phone]'); if (f) f.focus(); }, 30);
+  }
+
+  /* 本地版是「手机号 + 验证码」，接了后端以后是「邮箱 + 密码 + 注册/登录切换」 */
+  let authMode = 'signup';
+
+  function applyAuthMode() {
+    const remote = !!(window.QiyuSync && window.QiyuSync.on);
+    const tabs = $('[data-auth-tabs]');
+    if (tabs) tabs.hidden = !remote;
+    $$('[data-auth-mode]').forEach(function (b) {
+      b.classList.toggle('is-on', b.getAttribute('data-auth-mode') === authMode);
+    });
+    const emailEl = $('[data-auth-phone]');
+    const passEl = $('[data-auth-code]');
+    const nameField = $('[data-auth-name-field]');
+    const submit = $('[data-auth-form] button[type="submit"]');
+    if (!emailEl || !passEl) return;
+
+    if (remote) {
+      setText('[data-auth-title]', authMode === 'signup' ? '注册栖旅账号' : '登录栖旅');
+      setText('[data-auth-label-email]', '邮箱');
+      setText('[data-auth-label-code]', '密码');
+      emailEl.type = 'email';
+      emailEl.removeAttribute('inputmode');
+      emailEl.setAttribute('maxlength', '80');
+      emailEl.setAttribute('autocomplete', 'email');
+      emailEl.setAttribute('placeholder', 'you@example.com');
+      passEl.type = 'password';
+      passEl.setAttribute('maxlength', '72');
+      passEl.setAttribute('autocomplete', authMode === 'signup' ? 'new-password' : 'current-password');
+      passEl.setAttribute('placeholder', '至少 6 位');
+      if (nameField) nameField.hidden = authMode === 'signin';
+      setText('[data-auth-note]', authMode === 'signup'
+        ? '注册免费，发帖也免费。邮箱只用来登录和找回密码，不会发广告。'
+        : '用注册时的邮箱和密码登录。');
+      if (submit) submit.textContent = authMode === 'signup' ? '注册并进入' : '登录';
+    } else {
+      setText('[data-auth-title]', '注册 / 登录');
+      setText('[data-auth-label-email]', '手机号');
+      setText('[data-auth-label-code]', '验证码');
+      emailEl.type = 'tel';
+      emailEl.setAttribute('inputmode', 'numeric');
+      emailEl.setAttribute('maxlength', '11');
+      emailEl.setAttribute('autocomplete', 'tel');
+      emailEl.setAttribute('placeholder', '11 位手机号');
+      passEl.type = 'text';
+      passEl.setAttribute('inputmode', 'numeric');
+      passEl.setAttribute('maxlength', '6');
+      passEl.setAttribute('autocomplete', 'one-time-code');
+      passEl.setAttribute('placeholder', '6 位数字（原型阶段随便填）');
+      if (nameField) nameField.hidden = false;
+      setText('[data-auth-note]', '原型阶段不会真的发短信，验证码填 6 位数字就能进；账号目前只存在这台设备上。');
+      if (submit) submit.textContent = '注册并进入';
+    }
   }
 
   function closeAuth() {
@@ -242,6 +304,44 @@
     const phoneEl = $('[data-auth-phone]');
     const codeEl = $('[data-auth-code]');
     const nameEl = $('[data-auth-name]');
+    const remote = !!(window.QiyuSync && window.QiyuSync.on);
+
+    // 接了后端：邮箱 + 密码（注册时会自动建一条用户档案）
+    if (remote) {
+      const email = (phoneEl.value || '').trim();
+      const pass = codeEl.value || '';
+      const nick = (nameEl.value || '').trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('邮箱填得不太对'); phoneEl.focus(); return; }
+      if (pass.length < 6) { toast('密码至少 6 位'); codeEl.focus(); return; }
+      const submitBtn = $('[data-auth-form] button[type="submit"]');
+      const isSignup = authMode === 'signup';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = isSignup ? '注册中…' : '登录中…'; }
+      const done = function () { if (submitBtn) submitBtn.disabled = false; applyAuthMode(); };
+      (isSignup ? window.QiyuSync.signUp(email, pass, nick) : window.QiyuSync.signIn(email, pass))
+        .then(function (data) {
+          done();
+          if (!data || !data.access_token) {
+            toast('注册成功，去邮箱点一下确认链接，再回来登录');
+            authMode = 'signin';
+            applyAuthMode();
+            return;
+          }
+          const meta = (data.user && data.user.user_metadata) || {};
+          window.QiyuApp.setAccount({
+            phone: email, email: email, color: '#c8452e',
+            name: meta.name || nick || '旅人', ts: Date.now()
+          });
+          closeAuth();
+          toast(isSignup ? '注册成功，欢迎来栖旅' : '登录成功');
+          cloudPull();
+        })
+        .catch(function (err) {
+          done();
+          toast(err && err.message ? err.message : '没成功，再试一次');
+        });
+      return;
+    }
+
     const phone = (phoneEl.value || '').replace(/\D/g, '');
     const code = (codeEl.value || '').replace(/\D/g, '');
     let name = (nameEl.value || '').trim();
@@ -261,6 +361,12 @@
     const who = store.account ? store.account.name : '';
     store.account = null;
     store.me = { name: '我', color: '#1f1c18' };
+    if (window.QiyuSync && window.QiyuSync.on) {
+      window.QiyuSync.signOut();
+      store.remotePosts = [];
+      store.likedPosts = [];
+      cloudPull();   // 退回游客视角，重新拉那 3 条
+    }
     store.save();
     renderAccount();
     refreshAfterAccount();
@@ -274,6 +380,82 @@
     if (state.view === 'saved') renderSaved();
     if (detailCityId) openDetail(detailCityId);
     updateBadges();
+  }
+
+  /* ---------------- 云端数据落进本地 store ---------------- */
+
+  /* sync.js 拉完数据后调用这里：把服务器上的帖子、作者、点赞、收藏、笔记并进本地 store，
+     界面照旧用同一套渲染逻辑，不用改。 */
+  function ingestRemote(payload) {
+    if (!payload) return 0;
+    const users = {};
+    (payload.posts || []).forEach(function (row) {
+      if (!row.author) return;
+      users[row.author] = {
+        id: row.author,
+        name: row.author_name || '旅人',
+        color: row.author_color || '#666666',
+        home: row.author_home || ''
+      };
+    });
+    (payload.replies || []).forEach(function (r) {
+      if (!r.author) return;
+      const pr = r.profiles || {};
+      users[r.author] = {
+        id: r.author,
+        name: pr.name || '旅人',
+        color: pr.color || '#666666',
+        home: pr.home || ''
+      };
+    });
+    store.remoteUsers = Object.assign({}, store.remoteUsers, users);
+
+    const repliesByPost = {};
+    (payload.replies || []).forEach(function (r) {
+      const list = repliesByPost[r.post] || (repliesByPost[r.post] = []);
+      list.push({ author: r.author, text: r.body, ts: Date.parse(r.created_at) || Date.now() });
+    });
+
+    const liked = (payload.liked || []).map(function (id) { return 'r' + id; });
+
+    store.remotePosts = (payload.posts || []).map(function (row) {
+      const id = 'r' + row.id;
+      const isLiked = liked.indexOf(id) >= 0;
+      const serverLikes = Number(row.likes || 0);
+      return {
+        id: id,
+        remoteId: row.id,
+        city: row.city || '',
+        topic: row.topic || 'daily',
+        author: row.author,
+        ts: Date.parse(row.created_at) || Date.now(),
+        text: row.body,
+        // 服务端的总数里已经含了我这一票，先减掉，界面会用 likedPosts 再加回来
+        likes: Math.max(0, serverLikes - (isLiked ? 1 : 0)),
+        replies: repliesByPost[row.id] || [],
+        mine: !!(payload.me && row.author === payload.me)
+      };
+    });
+
+    store.likedPosts = liked;
+    if (payload.saved) store.savedCities = payload.saved.slice();
+    (payload.notes || []).forEach(function (n) { store.notes[n.city] = n.body; });
+    if (payload.prefs) store.prefs = payload.prefs;
+    store.save();
+
+    renderGallery();
+    if (state.view === 'feed') renderFeed();
+    if (state.view === 'saved') renderSaved();
+    if (detailCityId) openDetail(detailCityId);
+    updateBadges();
+    syncCompareButtons();
+    return store.remotePosts.length;
+  }
+
+  /* 拉一次云端（发帖/回复/点赞之后调用） */
+  function cloudPull() {
+    if (!window.QiyuSync || !window.QiyuSync.on) return;
+    window.QiyuSync.pull().catch(function () { /* 断网就先用本地的 */ });
   }
 
   function fmtTime(ts) {
@@ -345,7 +527,8 @@
         text: p.text, likes: 0, replies: [], mine: true
       };
     });
-    return mine.concat(seed);
+    // 接了云端以后，帖子里还有一份来自服务器的（作者是 uuid）
+    return mine.concat(store.remotePosts || []).concat(seed);
   }
 
   function repliesOf(post) {
@@ -2378,6 +2561,13 @@
 
   function addPost(cityId, topic, text) {
     if (!text.trim()) return false;
+    // 接了后端：发到服务器，然后重新拉一次（所有人都会看到）
+    if (window.QiyuSync && window.QiyuSync.on && window.QiyuSync.user()) {
+      window.QiyuSync.createPost({ city: cityId, topic: topic, body: text.trim() })
+        .then(function () { cloudPull(); })
+        .catch(function (err) { toast('没发出去：' + (err.message || '网络问题')); });
+      return true;
+    }
     store.userPosts.push({
       id: 'u' + Date.now(),
       city: cityId || '',
@@ -2438,6 +2628,9 @@
         };
       }
       store.prefs[key] = Number(t.value);
+      if (window.QiyuSync && window.QiyuSync.on && window.QiyuSync.user()) {
+        window.QiyuSync.savePrefs(store.prefs).catch(function () { /* 本地已保存 */ });
+      }
       store.save();
       const valEl = $('[data-pref-val="' + key + '"]');
       if (valEl) valEl.textContent = t.value;
@@ -2451,6 +2644,12 @@
       // 账号相关：先处理弹层自己的按钮，再拦需要登录的动作
       if (t.closest('[data-open-auth]')) { openAuth(); return; }
       if (t.closest('[data-close-auth]')) { closeAuth(); return; }
+      const authTab = t.closest('[data-auth-mode]');
+      if (authTab) {
+        authMode = authTab.getAttribute('data-auth-mode');
+        applyAuthMode();
+        return;
+      }
       if (t.closest('[data-signout]')) { signOut(); return; }
       if (!isMember()) {
         const gated = t.closest('[data-star]') || t.closest('[data-open-composer]') ||
@@ -2511,8 +2710,15 @@
         const id = joinBtn.getAttribute(isJoin ? 'data-join' : 'data-signup');
         const post = allPosts().filter(function (p) { return p.id === id; })[0];
         if (!post) return;
+        const verbText = isJoin ? '我也想一起，算我一个。' : '我报名。';
+        if (post.remoteId && window.QiyuSync && window.QiyuSync.on) {
+          window.QiyuSync.createReply(post.remoteId, verbText)
+            .then(function () { toast(isJoin ? '已举手，对方会在帖子里看到你' : '已报名，组织者会在帖子里看到你'); cloudPull(); })
+            .catch(function (err) { toast('没成功：' + (err.message || '网络问题')); });
+          return;
+        }
         if (!store.userReplies[id]) store.userReplies[id] = [];
-        store.userReplies[id].push({ text: isJoin ? '我也想一起，算我一个。' : '我报名。', ts: Date.now() });
+        store.userReplies[id].push({ text: verbText, ts: Date.now() });
         store.save();
         const n = repliesOf(post).length;
         joinBtn.classList.add('is-on');
@@ -2590,6 +2796,9 @@
         const id = noteSave.getAttribute('data-note-save');
         const input = $('[data-note-input="' + id + '"]');
         store.notes[id] = input ? input.value : '';
+        if (window.QiyuSync && window.QiyuSync.on && window.QiyuSync.user()) {
+          window.QiyuSync.saveNote(id, store.notes[id]).catch(function () { /* 本地已保存 */ });
+        }
         store.save();
         toast('笔记已保存，只有你能看到');
         return;
@@ -2642,6 +2851,9 @@
         } else {
           store.savedCities.push(id);
           toast('已把 ' + city.name + ' 加入旅居清单');
+        }
+        if (window.QiyuSync && window.QiyuSync.on && window.QiyuSync.user()) {
+          window.QiyuSync.saveCity(id, idx < 0).catch(function () { /* 同步失败不影响本地 */ });
         }
         store.save();
         syncStars(id);
@@ -2699,6 +2911,12 @@
         const id = like.getAttribute('data-like');
         const i = store.likedPosts.indexOf(id);
         if (i >= 0) store.likedPosts.splice(i, 1); else store.likedPosts.push(id);
+        const remotePost = store.remotePosts.filter(function (p) { return p.id === id; })[0];
+        if (remotePost && remotePost.remoteId && window.QiyuSync && window.QiyuSync.on) {
+          const call = i >= 0 ? window.QiyuSync.unlike(remotePost.remoteId) : window.QiyuSync.like(remotePost.remoteId);
+          call.then(function () { remotePost.likes = Math.max(0, remotePost.likes + (i >= 0 ? -1 : 1)); })
+              .catch(function () { toast('点赞没同步上，稍后再试'); });
+        }
         store.save();
         const post = allPosts().filter(function (p) { return p.id === id; })[0];
         like.innerHTML = '<span aria-hidden="true">♥</span> ' + likeCount(post);
@@ -2740,6 +2958,14 @@
         const input = $('input', form);
         const text = (input.value || '').trim();
         if (!text) { input.focus(); return; }
+        const remoteTarget = store.remotePosts.filter(function (p) { return p.id === id; })[0];
+        if (remoteTarget && remoteTarget.remoteId && window.QiyuSync && window.QiyuSync.on) {
+          window.QiyuSync.createReply(remoteTarget.remoteId, text)
+            .then(function () { toast('已回复'); cloudPull(); })
+            .catch(function (err) { toast('没回上：' + (err.message || '网络问题')); });
+          input.value = '';
+          return;
+        }
         if (!store.userReplies[id]) store.userReplies[id] = [];
         store.userReplies[id].push({ text: text, ts: Date.now() });
         store.save();
@@ -3156,6 +3382,20 @@
     updateBadges();
     syncCompareButtons();
 
+    // 接了后端：先恢复登录态，再把云端数据拉下来合并
+    if (window.QiyuSync && window.QiyuSync.on) {
+      window.QiyuSync.restore().then(function (s) {
+        if (s && s.user) {
+          const meta = s.user.user_metadata || {};
+          window.QiyuApp.setAccount({
+            phone: s.user.email, email: s.user.email, color: '#c8452e',
+            name: meta.name || '我', ts: Date.now()
+          });
+        }
+        return window.QiyuSync.pull();
+      }).catch(function () { /* 断网或配置有误，就先用本地缓存照常显示 */ });
+    }
+
     // 直接打开某座城市：index.html?city=dali
     try {
       const cityParam = new URLSearchParams(location.search).get('city');
@@ -3178,6 +3418,21 @@
     const savedWrapHost = $('#view-saved .wrap');
     if (savedWrapHost) savedWrapHost.appendChild(savedWrap);
   }
+
+  /* 给云同步层（sync.js）用的接口：它只通过这里读写数据 */
+  window.QiyuApp = {
+    store: store,
+    ingest: ingestRemote,
+    setAccount: function (acct) {
+      store.account = acct;
+      store.me = { name: acct.name || '我', color: acct.color || '#c8452e' };
+      store.save();
+      renderAccount();
+      refreshAfterAccount();
+    },
+    openDetail: openDetail,
+    toast: toast
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

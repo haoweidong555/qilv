@@ -299,21 +299,25 @@
   <form class="modal modal-auth" role="dialog" aria-modal="true" aria-label="注册或登录" data-auth-form>
     <h2 data-auth-title>注册 / 登录</h2>
     <p class="modal-sub" data-auth-reason>注册免费，发帖也免费。注册后可以看完整的旅居数据和全部社区笔记。</p>
+    <div class="ctabs auth-tabs" data-auth-tabs hidden>
+      <button type="button" class="ctab is-on" data-auth-mode="signup">注册新账号</button>
+      <button type="button" class="ctab" data-auth-mode="signin">我已注册</button>
+    </div>
     <label class="field">
-      <span>手机号</span>
+      <span data-auth-label-email>手机号</span>
       <input type="tel" inputmode="numeric" autocomplete="tel" maxlength="11"
              placeholder="11 位手机号" data-auth-phone>
     </label>
     <label class="field">
-      <span>验证码</span>
+      <span data-auth-label-code>验证码</span>
       <input type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6"
              placeholder="6 位数字（原型阶段随便填）" data-auth-code>
     </label>
-    <label class="field">
+    <label class="field" data-auth-name-field>
       <span>昵称</span>
       <input type="text" maxlength="12" placeholder="别人怎么称呼你" data-auth-name>
     </label>
-    <p class="auth-note">原型阶段不会真的发短信，验证码填 6 位数字就能进；账号目前只存在这台设备上。</p>
+    <p class="auth-note" data-auth-note>原型阶段不会真的发短信，验证码填 6 位数字就能进；账号目前只存在这台设备上。</p>
     <div class="modal-foot">
       <button type="button" class="ghost-btn" data-close-auth>取消</button>
       <button type="submit" class="primary-btn">注册并进入</button>
@@ -350,9 +354,11 @@
 
 <div class="toast" role="status" aria-live="polite" data-toast hidden></div>
 
+<script src="assets/js/config.js"></script>
 <script src="assets/js/data.js"></script>
 <script src="assets/js/scenes.js"></script>
 <script src="assets/js/daycycle.js"></script>
 <script src="assets/js/app.js"></script>
+<script src="assets/js/sync.js"></script>
 </body>
 </html>
