@@ -48,6 +48,9 @@ STAMP="$(date '+%Y%m%d%H%M')"
 sed -i '' -E "s/\?v=[0-9A-Za-z]+/?v=$STAMP/g" "$SITE/index.html"
 echo "资源版本号：$STAMP"
 
+# 每座城市生成一个可被搜索引擎收录的静态页（cities/ + sitemap.xml + robots.txt）
+python3 "$SRC/tools/build-city-pages.py" "$SITE"
+
 cd "$WORK"
 git init -q
 git checkout -q -b gh-pages

@@ -3452,10 +3452,10 @@
   function shareCity(id) {
     const city = D.cityById(id);
     if (!city) return;
-    const base = (location.protocol === 'http:' || location.protocol === 'https:')
-      ? location.origin + location.pathname
-      : 'index.html';
-    const url = base + '?city=' + id;
+    const live = (location.protocol === 'http:' || location.protocol === 'https:');
+    const base = location.origin + location.pathname;
+    // 分享优先给「城市指南」静态页：别人点开不用等 JS，搜索引擎也能收录它
+    const url = live ? (base + 'cities/' + id + '/') : ('index.html?city=' + id);
     const done = function () { toast('链接已复制，发给朋友就能直接打开' + city.name); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(url).then(done, function () { toast(url); });

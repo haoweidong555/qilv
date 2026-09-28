@@ -22,34 +22,16 @@ import time
 import urllib.error
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from official_content import CONTENT_MD, city_index, parse_content   # noqa: E402
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "supabase", "官方账号.local.json")
-CONTENT = os.path.join(ROOT, "content", "官方手册.md")
-DATA_JS = os.path.join(ROOT, "assets", "js", "data.js")
+CONTENT = CONTENT_MD
 
 # 公开值：和 assets/js/config.js 里一致，走 Netlify 代理（国内可直连）
 BASE = "https://qilv-api.netlify.app"
 KEY = "sb_publishable_BWHft8nFb7VP5HPNyHXLNA_xkMUKEly"
-
-TOPICS = {"buddy", "meet", "rent", "guide", "pit", "work", "daily"}
-
-
-def city_index():
-    """从 assets/js/data.js 读出「城市中文名 → 内部 id」的对照表。
-
-    内容文件里写中文城市名（人看得懂），发帖时换成 id（网站内部用它做筛选和标签）。
-    """
-    with open(DATA_JS, encoding="utf-8") as f:
-        src = f.read()
-    pairs = re.findall(
-        r"id:\s*'([^']+)',\s*name:\s*'([^']+)',\s*region:\s*'([^']+)'", src)
-    name2id, id2name = {}, {}
-    for cid, name, _region in pairs:
-        if cid in id2name:
-            continue
-        id2name[cid] = name
-        name2id[name] = cid
-    return name2id, id2name
 
 
 def call(method, path, body=None, token=None, extra=None):
@@ -74,51 +56,6 @@ def call(method, path, body=None, token=None, extra=None):
             last = e
             time.sleep(2 + attempt * 3)
     raise SystemExit("网络不稳，重试三次仍失败：%s %s -> %r" % (method, path, last))
-
-
-def parse_content(path, name2id, id2name):
-    """把 @@ city=xx topic=yy 分块的文件解析成 [{city, topic, body}]"""
-    with open(path, encoding="utf-8") as f:
-        text = f.read()
-    text = re.sub(r"<!--.*?-->", "", text, flags=re.S)      # 去掉开头的说明注释
-
-    items, city, topic, buf = [], None, None, []
-
-    def flush():
-        if city is None:
-            return
-        body = "\n".join(buf).strip()
-        if not body:
-            return
-        if topic not in TOPICS:
-            raise SystemExit("话题写错了：%r（可用：%s）" % (topic, " ".join(sorted(TOPICS))))
-        if len(body) > 2000:
-            raise SystemExit("正文超过 2000 字，数据库会拒绝：%s" % body[:30])
-        # 「话题」表示不挂任何城市（写跨城市的通用内容时用）
-        if not city or city in ("话题", "-", "无"):
-            cid = None
-        elif city in name2id:
-            cid = name2id[city]
-        elif city in id2name:
-            cid = city
-        else:
-            raise SystemExit("城市写错了：%r（请写中文城市名，例如 大理、稻城亚丁）" % city)
-        items.append({"city": cid, "topic": topic, "body": body})
-
-    for line in text.splitlines():
-        if line.startswith("@@"):
-            flush()
-            city, topic, buf = None, None, []
-            for part in line[2:].split():
-                k, _, v = part.partition("=")
-                if k == "city":
-                    city = v.strip()
-                elif k == "topic":
-                    topic = v.strip()
-            continue
-        buf.append(line)
-    flush()
-    return items
 
 
 def main():
