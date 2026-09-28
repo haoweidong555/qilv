@@ -24,12 +24,31 @@ import urllib.request
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG = os.path.join(ROOT, "supabase", "官方账号.local.json")
 CONTENT = os.path.join(ROOT, "content", "官方手册.md")
+DATA_JS = os.path.join(ROOT, "assets", "js", "data.js")
 
 # 公开值：和 assets/js/config.js 里一致，走 Netlify 代理（国内可直连）
 BASE = "https://qilv-api.netlify.app"
 KEY = "sb_publishable_BWHft8nFb7VP5HPNyHXLNA_xkMUKEly"
 
 TOPICS = {"buddy", "meet", "rent", "guide", "pit", "work", "daily"}
+
+
+def city_index():
+    """从 assets/js/data.js 读出「城市中文名 → 内部 id」的对照表。
+
+    内容文件里写中文城市名（人看得懂），发帖时换成 id（网站内部用它做筛选和标签）。
+    """
+    with open(DATA_JS, encoding="utf-8") as f:
+        src = f.read()
+    pairs = re.findall(
+        r"id:\s*'([^']+)',\s*name:\s*'([^']+)',\s*region:\s*'([^']+)'", src)
+    name2id, id2name = {}, {}
+    for cid, name, _region in pairs:
+        if cid in id2name:
+            continue
+        id2name[cid] = name
+        name2id[name] = cid
+    return name2id, id2name
 
 
 def call(method, path, body=None, token=None, extra=None):
@@ -49,7 +68,7 @@ def call(method, path, body=None, token=None, extra=None):
         raise SystemExit("请求失败 %s %s -> %s %s" % (method, path, e.code, e.read().decode("utf-8")[:300]))
 
 
-def parse_content(path):
+def parse_content(path, name2id, id2name):
     """把 @@ city=xx topic=yy 分块的文件解析成 [{city, topic, body}]"""
     with open(path, encoding="utf-8") as f:
         text = f.read()
@@ -67,7 +86,16 @@ def parse_content(path):
             raise SystemExit("话题写错了：%r（可用：%s）" % (topic, " ".join(sorted(TOPICS))))
         if len(body) > 2000:
             raise SystemExit("正文超过 2000 字，数据库会拒绝：%s" % body[:30])
-        items.append({"city": city or None, "topic": topic, "body": body})
+        # 「话题」表示不挂任何城市（写跨城市的通用内容时用）
+        if not city or city in ("话题", "-", "无"):
+            cid = None
+        elif city in name2id:
+            cid = name2id[city]
+        elif city in id2name:
+            cid = city
+        else:
+            raise SystemExit("城市写错了：%r（请写中文城市名，例如 大理、稻城亚丁）" % city)
+        items.append({"city": cid, "topic": topic, "body": body})
 
     for line in text.splitlines():
         if line.startswith("@@"):
@@ -92,7 +120,8 @@ def main():
     with open(CONFIG, encoding="utf-8") as f:
         cfg = json.load(f)
 
-    items = parse_content(CONTENT)
+    name2id, id2name = city_index()
+    items = parse_content(CONTENT, name2id, id2name)
     print("文件里共有 %d 条编辑部内容" % len(items))
 
     st, data = call("POST", "/auth/v1/token?grant_type=password",
@@ -104,11 +133,16 @@ def main():
     st, rows = call("GET", "/rest/v1/posts?select=body&author=eq." + uid, token=token)
     existing = {r["body"] for r in (rows or [])}
 
+    if "--reset" in sys.argv:
+        call("DELETE", "/rest/v1/posts?author=eq." + uid, token=token)
+        existing = set()
+        print("已清空编辑部旧帖（--reset），全部重发")
+
     todo = [it for it in items if it["body"] not in existing]
     print("已发布 %d 条，本次要补 %d 条" % (len(existing), len(todo)))
     if dry:
         for it in todo:
-            print("  · [%s] %s" % (it["city"] or "话题", it["body"].split("\n")[0][:40]))
+            print("  · [%s] %s" % (id2name.get(it["city"], "话题"), it["body"].split("\n")[0][:40]))
         return
 
     for it in todo:
@@ -118,7 +152,7 @@ def main():
             "topic": it["topic"],
             "body": it["body"],
         }, token=token, extra={"Prefer": "return=minimal"})
-        print("  ✓ [%s] %s" % (it["city"] or "话题", it["body"].split("\n")[0][:40]))
+        print("  ✓ [%s] %s" % (id2name.get(it["city"], "话题"), it["body"].split("\n")[0][:40]))
 
     print("完成。")
 
