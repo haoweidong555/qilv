@@ -405,8 +405,15 @@
      界面照旧用同一套渲染逻辑，不用改。 */
   function ingestRemote(payload) {
     if (!payload) return 0;
+    // 同一批数据可能来自两个接口（官方内容 + 游客可见内容），按 id 去重，避免同一条出现两次
+    const seen = {};
+    const rows = (payload.posts || []).filter(function (row) {
+      if (!row || !row.id || seen[row.id]) return false;
+      seen[row.id] = true;
+      return true;
+    });
     const users = {};
-    (payload.posts || []).forEach(function (row) {
+    rows.forEach(function (row) {
       if (!row.author) return;
       users[row.author] = {
         id: row.author,
@@ -437,7 +444,7 @@
 
     const liked = (payload.liked || []).map(function (id) { return 'r' + id; });
 
-    store.remotePosts = (payload.posts || []).map(function (row) {
+    store.remotePosts = rows.map(function (row) {
       const id = 'r' + row.id;
       const isLiked = liked.indexOf(id) >= 0;
       const serverLikes = Number(row.likes || 0);
