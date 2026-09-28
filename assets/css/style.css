@@ -1542,6 +1542,22 @@ button.cc-row:hover span { color: var(--accent); }
 }
 .handbook-cnt { font-size: 11.5px; color: var(--ink-3); }
 .handbook-card .btn-slim { padding: 6px 12px; font-size: 12px; }
+.handbook-cta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+/* 注册引导里露出来的几行「预告」 */
+.lock-teasers {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 4px auto 14px; max-width: 520px; text-align: left;
+}
+.lock-teaser { display: flex; align-items: flex-start; gap: 8px; }
+.lock-teaser .avatar-sm { width: 24px; height: 24px; font-size: 11px; flex: none; }
+.lock-teaser-body { min-width: 0; }
+.lock-teaser-who { font-size: 12px; color: var(--ink-2); }
+.lock-teaser-who em { font-style: normal; color: var(--ink-3); margin-left: 2px; }
+.lock-teaser-body p {
+  margin: 2px 0 0; font-size: 13px; line-height: 1.6; color: var(--ink-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
 
 .stat-grid {
   display: grid;

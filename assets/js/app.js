@@ -196,14 +196,29 @@
 
   // 未登录时该看到哪些帖子：官方全给，用户笔记只放前几条
   function guestVisible(list) {
-    if (isMember()) return { shown: list, hidden: 0 };
+    if (isMember()) return { shown: list, hidden: 0, hiddenList: [] };
     const cfg = acctCfg();
     const official = list.filter(isOfficialPost);
     const fromUsers = list.filter(function (p) { return !isOfficialPost(p); });
-    const hidden = Math.max(0, fromUsers.length - cfg.guestPosts);
+    const hiddenList = fromUsers.slice(cfg.guestPosts);
     const shown = official.concat(fromUsers.slice(0, cfg.guestPosts))
       .sort(function (a, b) { return b.ts - a.ts; });
-    return { shown: shown, hidden: hidden };
+    return { shown: shown, hidden: hiddenList.length, hiddenList: hiddenList };
+  }
+
+  // 把被挡住的帖子变成几行「预告」：谁写的、在哪座城市、开头一句
+  function lockTeasers(list, n, withCity) {
+    return list.slice(0, n || 3).map(function (p) {
+      const u = user(p.author);
+      const city = p.city ? D.cityById(p.city) : null;
+      const text = String(p.text || '').replace(/\s+/g, ' ');
+      return {
+        name: u.name,
+        color: u.color,
+        city: (withCity === false) ? '' : (city ? city.name : ''),
+        text: text.length > 38 ? text.slice(0, 38) + '…' : text
+      };
+    });
   }
 
   /* ---------------- 账号：注册才能看更多 ---------------- */
@@ -218,11 +233,26 @@
   }
 
   /* 被锁住的整段内容：不渲染真数据，只给一块引导注册的牌子 */
-  function lockBlock(title, sub, cta) {
+  // teasers（可选）：把被挡住的内容露一两句出来，比单纯写「还有 N 条」更容易让人注册
+  function lockBlock(title, sub, cta, teasers) {
+    const teaserHtml = (teasers && teasers.length)
+      ? '<div class="lock-teasers">' + teasers.map(function (t) {
+          return '<div class="lock-teaser">' +
+            '<span class="avatar avatar-sm" style="background:' + esc(t.color || '#666') + '" aria-hidden="true">' +
+              esc((t.name || '旅').slice(0, 1)) + '</span>' +
+            '<div class="lock-teaser-body">' +
+              '<span class="lock-teaser-who">' + esc(t.name || '旅人') +
+                (t.city ? '<em>· ' + esc(t.city) + '</em>' : '') + '</span>' +
+              '<p>' + esc(t.text) + '</p>' +
+            '</div>' +
+          '</div>';
+        }).join('') + '</div>'
+      : '';
     return '<div class="lock-block">' +
       '<span class="lock-icon" aria-hidden="true">🔒</span>' +
       '<p class="lock-title">' + esc(title) + '</p>' +
       (sub ? '<p class="lock-sub">' + esc(sub) + '</p>' : '') +
+      teaserHtml +
       '<button type="button" class="primary-btn" data-open-auth="1">' +
         esc(cta || '免费注册，看完整内容') + '</button>' +
       '</div>';
@@ -2246,7 +2276,11 @@
       '</div>' +
       '<div class="handbook-foot">' +
         '<span class="handbook-cnt">编辑部为这座城市整理了 ' + rows.length + ' 篇 · 所有人可读</span>' +
-        '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>' +
+        '<span class="handbook-cta">' +
+          (isMember() ? '' :
+            '<button type="button" class="ghost-btn btn-slim" data-open-auth="1">听住过这儿的人怎么说 · 免费注册</button>') +
+          '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区 →</button>' +
+        '</span>' +
       '</div>' +
     '</div>';
   }
@@ -2264,7 +2298,8 @@
     // 未登录：指数构成只露两项、住下来的细节整段锁住、社区只露前几条
     const member = isMember();
     const cfg = acctCfg();
-    const postsShown = guestVisible(posts).shown;
+    const postsView = guestVisible(posts);
+    const postsShown = postsView.shown;
     const parts = indexParts(city);
     const partsShown = member ? parts : parts.slice(0, cfg.guestStats);
     const split = costSplit(city);
@@ -2419,12 +2454,14 @@
       empty: '这座城市还没有旅居笔记，你可以发第一条。'
     });
     setUrlCity(city.id);
-    if (!member && posts.length > postsShown.length) {
+    if (!member && postsView.hidden > 0) {
       const box = $('[data-city-posts]', panel);
       if (box) {
         box.insertAdjacentHTML('beforeend', lockBlock(
-          '这里还有 ' + (posts.length - postsShown.length) + ' 条旅居笔记',
-          '住过这里的人留下的房租、网速、避坑经验——注册后全部能看。'));
+          '这里还有 ' + postsView.hidden + ' 条旅居笔记',
+          '住过这里的人留下的房租、网速、避坑经验，注册后全部能看。',
+          '免费注册，看这 ' + postsView.hidden + ' 条',
+          lockTeasers(postsView.hiddenList, 3, false)));
       }
     }
     refreshMeAvatars(panel);
@@ -2509,8 +2546,10 @@
     renderPostList(box, view.shown, {});
     if (view.hidden > 0) {
       box.insertAdjacentHTML('beforeend', lockBlock(
-        '社区里还有 ' + view.hidden + ' 条旅居笔记',
-        '找搭子、避坑、房租、网速——都是住过那里的人写的。注册后全部能看，发帖也免费。'));
+        '还有 ' + view.hidden + ' 条旅居笔记，来自住在那儿的人',
+        '官方手册谁都看得到；这一类「住过才写得出来」的笔记，注册后全部能看——你也能发自己的。',
+        '免费注册，看这 ' + view.hidden + ' 条',
+        lockTeasers(view.hiddenList, 3)));
     }
     refreshMeAvatars(document);
   }
