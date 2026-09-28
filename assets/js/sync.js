@@ -123,11 +123,22 @@
     const me = session && session.user ? session.user.id : null;
 
     if (!me) {
-      const rows = await rest('/rpc/guest_posts', {
-        method: 'POST',
-        body: JSON.stringify({ max_rows: 3 })
+      // 游客能看到两类东西：
+      //   1. 编辑部的官方手册——这是网站自己的内容，对所有人开放；
+      //   2. 最近 3 条用户笔记——用户投稿仍然要注册才能看更多。
+      const [official, guestRows] = await Promise.all([
+        rest('/rpc/official_posts', { method: 'POST', body: '{}' }).catch(function () { return []; }),
+        rest('/rpc/guest_posts', {
+          method: 'POST',
+          body: JSON.stringify({ max_rows: 3 })
+        })
+      ]);
+      return app.ingest({
+        guest: true,
+        posts: (official || []).concat(guestRows || []),
+        replies: [],
+        liked: []
       });
-      return app.ingest({ guest: true, posts: rows || [], replies: [], liked: [] });
     }
 
     const [posts, replies, likes, saved, notes, prefs] = await Promise.all([

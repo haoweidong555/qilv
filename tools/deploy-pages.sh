@@ -43,6 +43,11 @@ cp -R "$SRC/assets/css" "$SRC/assets/js" "$SRC/assets/img" "$SRC/assets/video" "
 cp "$SRC/serve.py" "$SITE/" 2>/dev/null || true
 touch "$SITE/.nojekyll"
 
+# 给 css/js 换个版本号：每次都换，浏览器就不会拿着上一个版本的脚本不放
+STAMP="$(date '+%Y%m%d%H%M')"
+sed -i '' -E "s/\?v=[0-9A-Za-z]+/?v=$STAMP/g" "$SITE/index.html"
+echo "资源版本号：$STAMP"
+
 cd "$WORK"
 git init -q
 git checkout -q -b gh-pages

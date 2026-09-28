@@ -189,6 +189,23 @@
     return D.USERS[id] || { id: id, name: '旅人', color: '#666666', home: '' };
   }
 
+  /* 编辑部的内容（官方手册）对所有人开放；用户投稿才是注册后才能看更多 */
+  function isOfficialPost(p) {
+    return !!(p && p.author && user(p.author).official);
+  }
+
+  // 未登录时该看到哪些帖子：官方全给，用户笔记只放前几条
+  function guestVisible(list) {
+    if (isMember()) return { shown: list, hidden: 0 };
+    const cfg = acctCfg();
+    const official = list.filter(isOfficialPost);
+    const fromUsers = list.filter(function (p) { return !isOfficialPost(p); });
+    const hidden = Math.max(0, fromUsers.length - cfg.guestPosts);
+    const shown = official.concat(fromUsers.slice(0, cfg.guestPosts))
+      .sort(function (a, b) { return b.ts - a.ts; });
+    return { shown: shown, hidden: hidden };
+  }
+
   /* ---------------- 账号：注册才能看更多 ---------------- */
 
   function acctCfg() {
@@ -2189,11 +2206,6 @@
 
   // 编辑部内容的展示顺序：手册 → 避坑 → 远程办公
   const HANDBOOK_ORDER = ['guide', 'pit', 'work'];
-  const HANDBOOK_LABEL = {
-    guide: ['城市手册', '住哪个片区、房租、网速、几月最舒服'],
-    pit: ['避坑', '交定金之前先看的几条'],
-    work: ['远程办公实测', '网速区间，和在哪儿办公最顺']
-  };
 
   function officialPostsOf(cityId) {
     return allPosts().filter(function (p) {
@@ -2202,17 +2214,10 @@
   }
 
   function handbookCard(city, posts) {
-    const member = isMember();
-    // 登录后：列出这座城市真实存在的三篇；
-    // 游客：只露标题，点一下就是注册入口——用户笔记本来就是注册才能看的。
-    const rows = HANDBOOK_ORDER.map(function (t) {
-      return {
-        topic: t,
-        label: HANDBOOK_LABEL[t][0],
-        desc: HANDBOOK_LABEL[t][1],
-        post: posts.filter(function (p) { return p.topic === t; })[0] || null
-      };
-    }).filter(function (r) { return member ? !!r.post : true; });
+    // 官方手册对所有人开放（含未登录），所以这里直接列出真实存在的几篇
+    const rows = HANDBOOK_ORDER
+      .map(function (t) { return posts.filter(function (p) { return p.topic === t; })[0] || null; })
+      .filter(Boolean);
     if (!rows.length) return '';
 
     return '<div class="handbook-card">' +
@@ -2222,26 +2227,19 @@
         '<span class="handbook-by">栖旅编辑部</span>' +
       '</div>' +
       '<div class="handbook-list">' +
-        rows.map(function (r) {
-          const title = r.post ? String(r.post.text || '').split('\n')[0] : r.label;
-          const attr = r.post
-            ? ' data-handbook="' + city.id + '" data-topic="' + esc(r.topic) + '"'
-            : ' data-open-auth="1"';
-          return '<button type="button" class="handbook-row"' + attr + '>' +
-            '<span class="handbook-topic">#' + esc(D.topicName(r.topic)) + '</span>' +
-            '<span class="handbook-title">' + esc(title) +
-              (r.post ? '' : '<i class="handbook-desc">' + esc(r.desc) + '</i>') + '</span>' +
-            '<span class="handbook-go">' + (r.post ? '看全文 →' : '注册后看 →') + '</span>' +
+        rows.map(function (p) {
+          const title = String(p.text || '').split('\n')[0];
+          return '<button type="button" class="handbook-row" data-handbook="' + city.id +
+              '" data-topic="' + esc(p.topic) + '">' +
+            '<span class="handbook-topic">#' + esc(D.topicName(p.topic)) + '</span>' +
+            '<span class="handbook-title">' + esc(title) + '</span>' +
+            '<span class="handbook-go">看全文 →</span>' +
           '</button>';
         }).join('') +
       '</div>' +
       '<div class="handbook-foot">' +
-        '<span class="handbook-cnt">' + (member
-          ? '这座城市共有 ' + posts.length + ' 条官方笔记'
-          : '编辑部为这座城市整理了 ' + rows.length + ' 篇，注册后可看全文') + '</span>' +
-        (member
-          ? '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>'
-          : '') +
+        '<span class="handbook-cnt">编辑部为这座城市整理了 ' + rows.length + ' 篇 · 所有人可读</span>' +
+        '<button type="button" class="ghost-btn btn-slim" data-handbook="' + city.id + '">去交流区看全部 →</button>' +
       '</div>' +
     '</div>';
   }
@@ -2259,7 +2257,7 @@
     // 未登录：指数构成只露两项、住下来的细节整段锁住、社区只露前几条
     const member = isMember();
     const cfg = acctCfg();
-    const postsShown = member ? posts : posts.slice(0, cfg.guestPosts);
+    const postsShown = guestVisible(posts).shown;
     const parts = indexParts(city);
     const partsShown = member ? parts : parts.slice(0, cfg.guestStats);
     const split = costSplit(city);
@@ -2500,12 +2498,11 @@
     renderHotCities();
     const box = $('[data-post-list]');
     const all = feedPosts();
-    const cfg = acctCfg();
-    const shown = isMember() ? all : all.slice(0, cfg.guestPosts);
-    renderPostList(box, shown, {});
-    if (shown.length < all.length) {
+    const view = guestVisible(all);
+    renderPostList(box, view.shown, {});
+    if (view.hidden > 0) {
       box.insertAdjacentHTML('beforeend', lockBlock(
-        '社区里还有 ' + (all.length - shown.length) + ' 条旅居笔记',
+        '社区里还有 ' + view.hidden + ' 条旅居笔记',
         '找搭子、避坑、房租、网速——都是住过那里的人写的。注册后全部能看，发帖也免费。'));
     }
     refreshMeAvatars(document);

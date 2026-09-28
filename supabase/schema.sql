@@ -187,6 +187,26 @@ $$;
 revoke all on function public.guest_posts(int) from public;
 grant execute on function public.guest_posts(int) to anon, authenticated;
 
+-- 官方手册对所有人开放：这是网站自己的编辑内容，不占用「注册才能看用户笔记」的名额。
+-- 只返回 author 是官方账号的帖子，用户投稿依然要登录才看得到。
+create or replace function public.official_posts()
+returns table (
+  id uuid, city text, topic text, body text, created_at timestamptz,
+  author uuid, author_name text, author_color text, author_home text,
+  author_official boolean, likes bigint
+)
+language sql security definer set search_path = public as $$
+  select p.id, p.city, p.topic, p.body, p.created_at,
+         p.author, pr.name, pr.color, pr.home, pr.official,
+         (select count(*) from public.likes l where l.post = p.id)
+  from public.posts p
+  join public.profiles pr on pr.id = p.author
+  where pr.official
+  order by p.created_at desc;
+$$;
+revoke all on function public.official_posts() from public;
+grant execute on function public.official_posts() to anon, authenticated;
+
 -- 登录用户读帖子时，顺便把作者信息和点赞数一起带出来（省一次请求）
 -- create or replace 只能往末尾加列，所以新列 author_official 放在最后
 create or replace view public.posts_feed as
